@@ -23,7 +23,7 @@ function App() {
       setThinking(true);
       setStatus("Stockfish thinking...");
 
-      const res = await axios.post("http://127.0.0.1:8000/analyze", {
+      const res = await axios.post("https://raunak-chess-engine.onrender.com/analyze", {
         fen: newGame.fen(),
         depth,
       });
