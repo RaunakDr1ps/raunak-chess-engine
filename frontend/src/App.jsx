@@ -3,6 +3,8 @@ import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import axios from "axios";
 
+const API_URL = "https://raunak-chess-engine.onrender.com/analyze";
+
 console.log("Raunak Chess Engine v1");
 
 function App() {
@@ -23,24 +25,43 @@ function App() {
       setThinking(true);
       setStatus("Stockfish thinking...");
 
-      const res = await axios.post("https://raunak-chess-engine.onrender.com/analyze", {
+      const res = await axios.post(API_URL, {
         fen: newGame.fen(),
         depth,
       });
 
+      if (res.data.error) {
+        setStatus("Engine error: " + res.data.error);
+        console.log("Backend response:", res.data);
+        return;
+      }
+
       const engineMove = res.data.best_move;
-      setEvaluation(res.data.evaluation);
-      setEvalNumber(res.data.eval_number);
-      setBestMove(engineMove);
+
+      if (!engineMove) {
+        setStatus("Engine error: no best move returned");
+        console.log("Backend response:", res.data);
+        return;
+      }
 
       const engineGame = new Chess(newGame.fen());
       const enginePlayedMove = engineGame.move({
         from: engineMove.slice(0, 2),
         to: engineMove.slice(2, 4),
-        promotion: "q",
+        promotion: engineMove.length > 4 ? engineMove[4] : "q",
       });
 
+      if (!enginePlayedMove) {
+        setStatus("Engine error: invalid move returned");
+        console.log("Invalid engine move:", engineMove);
+        return;
+      }
+
+      setEvaluation(res.data.evaluation ?? "-");
+      setEvalNumber(res.data.eval_number ?? 0);
+      setBestMove(engineMove);
       setGame(engineGame);
+
       setLastMove({
         [enginePlayedMove.from]: { backgroundColor: "rgba(124,58,237,0.65)" },
         [enginePlayedMove.to]: { backgroundColor: "rgba(124,58,237,0.65)" },
@@ -56,7 +77,7 @@ function App() {
 
       setStatus("Your move");
     } catch (err) {
-      console.error(err);
+      console.error("Frontend/API error:", err);
       setStatus("Backend error. Check server.");
     } finally {
       setThinking(false);
@@ -66,9 +87,16 @@ function App() {
   function onDrop(sourceSquare, targetSquare) {
     if (thinking) return false;
 
+    const piece = game.get(sourceSquare);
+
+    if (!piece || piece.color !== "w") {
+      return false;
+    }
+
     const newGame = new Chess(game.fen());
 
     let move = null;
+
     try {
       move = newGame.move({
         from: sourceSquare,
@@ -88,10 +116,10 @@ function App() {
     });
 
     setTimeout(() => {
-  engineReply(newGame, move);
-}, 300);
+      engineReply(newGame, move);
+    }, 300);
 
-return true;
+    return true;
   }
 
   function resetGame() {
@@ -119,6 +147,7 @@ return true;
           onPieceDrop={onDrop}
           customSquareStyles={lastMove}
           boardOrientation="white"
+          arePiecesDraggable={!thinking}
         />
       </div>
 
