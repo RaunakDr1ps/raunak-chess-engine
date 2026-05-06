@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 
-STOCKFISH_PATH = os.environ.get("STOCKFISH_PATH", "/usr/games/stockfish")
+STOCKFISH_PATH = os.environ.get("STOCKFISH_PATH", "stockfish")
 
 app = FastAPI(title="Raunak Engine v1")
 
